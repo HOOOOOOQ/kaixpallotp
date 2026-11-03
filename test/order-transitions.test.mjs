@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {transitionOrder} from '../src/orders/transitions.mjs';
+function fake(status,failEvent=false){const calls=[];const conn={calls,async beginTransaction(){calls.push('begin');},async commit(){calls.push('commit');},async rollback(){calls.push('rollback');},release(){calls.push('release');},async execute(sql){calls.push(sql);if(sql.startsWith('SELECT'))return [status?[{status}]:[]];if(failEvent&&sql.startsWith('INSERT'))throw new Error('event failed');return [{}];}};return {conn,pool:{async getConnection(){return conn;}}};}
+const input={orderId:'12',expectedStatus:'PROCESSING',nextStatus:'UNKNOWN',reason:'Provider outcome unconfirmed'};
+test('transition locks order and commits status with event',async()=>{const {conn,pool}=fake('PROCESSING');assert.deepEqual(await transitionOrder(pool,input),{from:'PROCESSING',to:'UNKNOWN'});assert.match(conn.calls[1],/FOR UPDATE/);assert.match(conn.calls[3],/INSERT INTO order_events/);assert.deepEqual(conn.calls.slice(-2),['commit','release']);});
+test('transition rejects stale state and rolls back failed event',async()=>{const a=fake('PENDING');await assert.rejects(transitionOrder(a.pool,input),/state conflict/);assert.ok(a.conn.calls.includes('rollback'));const b=fake('PROCESSING',true);await assert.rejects(transitionOrder(b.pool,input),/event failed/);assert.ok(b.conn.calls.includes('rollback'));await assert.rejects(transitionOrder(b.pool,{...input,nextStatus:'COMPLETED'}),/Invalid order transition/);});
