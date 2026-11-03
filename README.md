@@ -72,3 +72,5 @@ After applying migrations, `ENABLE_MAINTENANCE_WORKER=true npm run worker` runs 
 ## Vercel preview
 
 The repository includes a static frontend and an HTTPS backend proxy configuration for Vercel. Vercel does **not** run the standalone server as a persistent process. Without a separately hosted backend and test database, API routes return 503; the site is not production-ready. Configuration has not yet been verified on Vercel. See [step-by-step setup and limitations](docs/VERCEL.md).
+
+An operator-only Zyrex catalogue test endpoint can run on Vercel using server-side credentials without a separate backend; it does not provide customer login, purchases, or payments. See [Vercel setup](docs/VERCEL.md#uji-koneksi-zyrex-hanya-operator-read-only). Live provider connectivity is unverified.

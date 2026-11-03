@@ -16,3 +16,20 @@ Vercel menyajikan file `public/` dan fungsi `api/proxy.mjs` meneruskan `/api/*` 
 5. Worker `npm run worker` adalah proses terpisah yang opt-in, bukan Vercel Function; jangan aktifkan tanpa meninjau kebijakan retensi dan backup.
 
 Pembelian, pembayaran, sinkronisasi Zyrex, dan verifikasi produksi belum tersedia/terverifikasi. Jangan aktifkan transaksi nyata. Jangan menyimpan kredensial dalam repository publik.
+
+## Uji koneksi Zyrex (hanya operator, read-only)
+
+`/api/zyrex` berjalan sebagai bagian dari Vercel Function dan tidak memerlukan `BACKEND_URL` atau database untuk membaca katalog. Endpoint ini **bukan** login pengguna atau toko dan tidak dihubungkan ke UI. Hanya `services`, `countries`, dan `offers` yang diizinkan; saldo provider, status OTP, pembelian, dan pembatalan tidak dibuka. Panggilan yang berhasil memakai kuota API Zyrex; terapkan pembatasan akses/rate limiting di edge sebelum digunakan lebih luas. Koneksi dan respons provider nyata belum diuji.
+
+Di Vercel, proyek `kaiixpall` → Settings → Environment Variables, tambahkan untuk Production:
+- `ZYREX_BASE_URL`: base HTTPS Zyrex yang diberikan provider, berakhiran `/api/v1`.
+- `ZYREX_API_KEY`: API key Zyrex; tandai sensitive. Jangan dimasukkan ke kode atau chat.
+- `ZYREX_ACCESS_TOKEN`: token operator **acak independen**, minimal 32 karakter (buat misalnya `openssl rand -hex 32` di perangkat sendiri); tandai sensitive. Ini bukan API key Zyrex dan jangan dipakai di kode browser.
+
+Redeploy setelah menyimpan variabel. Dari terminal milik operator, masukkan token secara aman ke variabel shell `ZYREX_ACCESS_TOKEN` dan uji:
+
+```sh
+curl -H "Authorization: Bearer $ZYREX_ACCESS_TOKEN" 'https://kaiixpall.vercel.app/api/zyrex?operation=services&server=2'
+```
+
+Jangan membagikan token atau menempelkannya pada perintah/screenshot yang terlihat orang lain. Tanpa token permintaan ditolak; tanpa konfigurasi endpoint mengembalikan 503. `countries` menerima `server`, `service_id`, `provider`; `offers` menerima `server`, `service_id`, `country_id` atau `country_code`, dan `provider`, sesuai dokumentasi Zyrex. Setelah 429, tunggu dan jangan retry agresif. Tidak ada perlindungan rate limit terdistribusi bawaan endpoint ini. Autentikasi akun, dashboard, dan penyimpanan masih memerlukan backend/database terpisah. Tidak ada transaksi nyata.
