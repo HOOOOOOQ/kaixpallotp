@@ -18,7 +18,7 @@ export async function zyrexRead(req, res, { env = process.env, fetchImpl = fetch
   if (ops.length !== 1 || !Object.hasOwn(operations, operation)) return send(res, 400, { error: 'Invalid operation.' });
   const params = {};
   for (const [key, value] of url.searchParams) {
-    if (key === '__p' || key === 'operation') continue;
+    if (key === '__p' || key === 'operation' || (key === 'path' && value === 'zyrex')) continue;
     if (!operations[operation].includes(key) || Object.hasOwn(params, key) || !value || value.length > 128) return send(res, 400, { error: 'Invalid parameters.' });
     params[key] = value;
   }
