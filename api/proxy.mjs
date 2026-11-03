@@ -1,3 +1,5 @@
+import { zyrexRead } from '../src/provider/vercel-read.mjs';
+
 // Vercel hosts only the public frontend and this same-origin API proxy.
 // The application backend and database are deployed separately.
 const allowedHeaders = ['authorization','cookie','content-type','origin','x-csrf-token'];
@@ -6,13 +8,14 @@ const fail = (res, status, message) => {res.statusCode=status;res.setHeader('Con
 export async function proxy(req,res,{fetchImpl=fetch,backendUrl=process.env.BACKEND_URL}={}) {
   res.setHeader('Cache-Control','no-store');
   if (!['GET','HEAD','POST'].includes(req.method)) {res.setHeader('Allow','GET, HEAD, POST');return fail(res,405,'Method not allowed.');}
+  const incoming=new URL(req.url,'http://internal');
+  const requested=req.query?.__p ?? incoming.searchParams.get('__p');
+  if(requested === 'zyrex') return zyrexRead(req,res);
   let backend;
   try {
     backend=new URL(backendUrl);
     if(backend.protocol!=='https:'||backend.username||backend.password||backend.search||backend.hash||backend.pathname!=='/') throw Error('invalid');
   } catch {return fail(res,503,'Backend is not configured.');}
-  const incoming=new URL(req.url,'http://internal');
-  const requested=req.query?.__p ?? incoming.searchParams.get('__p');
   if(typeof requested!=='string'||requested.length>512||!/^[-A-Za-z0-9_]+(?:\/[-A-Za-z0-9_]+)*$/.test(requested)) return fail(res,400,'Invalid API path.');
   const url=new URL(`/api/${requested}`,backend);
   for(const [key,value] of incoming.searchParams) if(key!=='__p') url.searchParams.append(key,value);
