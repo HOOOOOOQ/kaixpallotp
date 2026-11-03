@@ -5,7 +5,7 @@ const env={ZYREX_BASE_URL:'https://provider.example/api/v1',ZYREX_API_KEY:'PRIVA
 const req=(url='/api/proxy?__p=zyrex&operation=services',auth=`Bearer ${env.ZYREX_ACCESS_TOKEN}`,method='GET')=>({url,method,headers:{authorization:auth}});
 function response(){return {headers:{},setHeader(k,v){this.headers[k.toLowerCase()]=v},end(body){this.body=body}}}
 test('read-only operator endpoint sends provider key server-side', async()=>{
- let seen;const res=response();await zyrexRead(req('/api/proxy?__p=zyrex&operation=services&server=2'),res,{env,fetchImpl:async(url,options)=>{seen={url:String(url),options};return new Response(JSON.stringify({success:true,data:[]}),{status:200})}});
+ let seen;const res=response();await zyrexRead(req('/api/proxy?__p=zyrex&path=zyrex&operation=services&server=2'),res,{env,fetchImpl:async(url,options)=>{seen={url:String(url),options};return new Response(JSON.stringify({success:true,data:[]}),{status:200})}});
  assert.equal(res.statusCode,200);assert.equal(seen.url,'https://provider.example/api/v1/services?server=2');assert.equal(seen.options.headers['X-API-Key'],env.ZYREX_API_KEY);assert.ok(!res.body.includes(env.ZYREX_API_KEY));assert.equal(res.headers['cache-control'],'no-store');
 });
 test('rejects unauthorized, writes, sensitive operations, invalid input and missing configuration',async()=>{
